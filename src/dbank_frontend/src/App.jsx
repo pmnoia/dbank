@@ -43,6 +43,7 @@ function App() {
           <input id="submit-btn" type="submit" value="Finalise Transaction" />
         </form>
       </div>
+      <footer>DBank © all rights reserved 2026</footer>
     </main>
   );
 }
