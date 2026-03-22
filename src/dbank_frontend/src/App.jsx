@@ -1,24 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { dbank_backend } from "declarations/dbank_backend";
 
 function App() {
-  // const [greeting, setGreeting] = useState("");
+  const [balance, setBalance] = useState(0);
 
-  // function handleSubmit(event) {
-  //   event.preventDefault();
-  //   const name = event.target.elements.name.value;
-  //   dbank_backend.greet(name).then((greeting) => {
-  //     setGreeting(greeting);
-  //   });
-  //   return false;
-  // }
+  async function updateBalance() {
+    const currentValue = await dbank_backend.checkBalance();
+    setBalance(currentValue);
+  }
+
+  console.log(balance);
+
+  useEffect(() => {
+    updateBalance();
+  }, []);
+
+  console.log(balance);
 
   return (
     <main>
       <div class="container">
         <img src="dbank_coin_logo.png" alt="DBank logo" width="200" />
         <h1>
-          Current Balance: $<span id="value">300.00</span>
+          Current Balance: $<span id="value">{balance.toFixed(2)}</span>
         </h1>
         <div class="divider"></div>
         <form action="#">
