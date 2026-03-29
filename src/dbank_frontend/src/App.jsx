@@ -1,31 +1,67 @@
-import { useEffect, useState } from "react";
-import { dbank_backend } from "declarations/dbank_backend";
+import { useEffect, useRef, useState } from "react";
+import { Actor, HttpAgent } from "@icp-sdk/core/agent";
+import { idlFactory, canisterId } from "declarations/dbank_backend";
 
 function App() {
   const [balance, setBalance] = useState(0);
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const backend = useRef(null);
 
-  async function updateBalance() {
-    const currentValue = await dbank_backend.checkBalance();
-    setBalance(currentValue);
+  async function fetchBalance() {
+    try {
+      console.log("1. Requesting balance from backend...");
+      const currentBalance = await backend.current.checkBalance();
+      console.log("2. Backend responded with:", currentBalance);
+      setBalance(currentBalance.toFixed(2));
+    } catch (error) {
+      console.error("3. Houston, we have a problem:", error);
+    }
   }
 
-  console.log(balance);
-
   useEffect(() => {
-    updateBalance();
+    async function init() {
+      const agent = new HttpAgent();
+      if (process.env.DFX_NETWORK !== "ic") {
+        await agent.fetchRootKey();
+      }
+      backend.current = Actor.createActor(idlFactory, { agent, canisterId });
+      await fetchBalance();
+    }
+    init();
   }, []);
 
-  console.log(balance);
+  async function handleTransaction(event) {
+    event.preventDefault();
+
+    // TOP UP Process
+    if (topUpAmount !== "" && Number(topUpAmount) > 0) {
+      await backend.current.topUp(parseFloat(topUpAmount));
+    }
+
+    // WITHDRAW Process
+    if (withdrawAmount !== "" && Number(withdrawAmount) > 0) {
+      await backend.current.withdraw(parseFloat(withdrawAmount));
+    }
+
+    // Compound Interest and fetch new balance
+    await backend.current.compound();
+    await fetchBalance();
+
+    // Reset input fields
+    setTopUpAmount("");
+    setWithdrawAmount("");
+  }
 
   return (
     <main>
-      <div class="container">
+      <div className="container">
         <img src="dbank_coin_logo.png" alt="DBank logo" width="200" />
         <h1>
-          Current Balance: $<span id="value">{balance.toFixed(2)}</span>
+          Current Balance: $<span id="value">{balance}</span>
         </h1>
-        <div class="divider"></div>
-        <form action="#">
+        <div className="divider"></div>
+        <form onSubmit={handleTransaction}>
           <h2>Amount to Top Up</h2>
           <input
             id="input-amount"
@@ -33,7 +69,8 @@ function App() {
             step="0.01"
             min={0}
             name="topUp"
-            value=""
+            value={topUpAmount}
+            onChange={(e) => setTopUpAmount(e.target.value)}
           />
           <h2>Amount to Withdraw</h2>
           <input
@@ -42,7 +79,8 @@ function App() {
             name="withdraw"
             step="0.01"
             min={0}
-            value=""
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
           />
           <input id="submit-btn" type="submit" value="Finalise Transaction" />
         </form>
